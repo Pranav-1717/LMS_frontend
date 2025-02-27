@@ -1,0 +1,19 @@
+/* Ensure the form does not take full screen height */
+/* .apply-leave-container {
+    width: 100%;
+    height: 100%; 
+    padding: 5px;
+    background-color: white;
+    border-radius: 10px;
+    overflow-y: auto; 
+} */
+  
+  /* Fix main-content inside Dashboard */
+  .main-content {
+    /* flex-grow: 1; */
+    /* padding: 20px; */
+    /* background-color: #ffffff; */
+    /* height: 85vh;  */
+    /* overflow: auto;  */
+  }
+  

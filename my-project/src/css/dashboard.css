@@ -1,0 +1,112 @@
+/* Import Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    
+}
+
+body::-webkit-scrollbar {
+    display: none;
+}
+
+/* Dashboard Container */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* Navbar */
+.navbar {
+    position: sticky;
+    top:0;
+    background:  #f0f0f0;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.navbar-links a {
+    color: white;
+    text-decoration: none;
+    margin-left: 15px;
+    font-size: 16px;
+}
+
+.navbar-links a:hover {
+    text-decoration: underline;
+}
+
+/* Dashboard Content */
+.dashboard-content {
+    display: flex;
+    flex-grow: 1;
+    height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    position: sticky;
+    top:66px;
+    width: 255px;
+    background:  #f0f0f0;
+    padding: 20px;
+    height: calc(100vh - 66px);
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin: 15px 0;
+}
+
+.sidebar ul li a {
+    text-decoration: none;
+    color: #555;
+    font-size: 16px;
+    font-weight: 500;
+    display: block;
+    padding: 10px;
+    transition: 0.3s;
+}
+
+.sidebar .active {
+    color:hsl(0, 0%, 50%);
+}
+
+/* .sidebar ul li a:hover {
+    color:hsl(0, 0%, 50%);
+} */
+
+/* Main Content */
+.main-content {
+    flex-grow:1;
+    background: #f4f4f4;
+    height: 100%;
+    padding: 2px;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox ke liye */
+    -ms-overflow-style: none; /* Internet Explorer ke liye */
+}
+
+
+/* Chrome, Safari, Edge ke liye scrollbar hide karna */
+.main-content::-webkit-scrollbar {
+    display: none;
+}
