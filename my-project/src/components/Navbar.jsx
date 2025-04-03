@@ -1,18 +1,25 @@
-import React, { useContext } from "react";
+import React, { useState ,useEffect} from "react";
 import { Link, useNavigate } from "react-router-dom";
-// import { AuthContext } from "../context/AuthContext";
+// import { AuthContext } from "../Teacher/context/AuthContext";
 
 
-const Navbar = () => {
+const Navbar = ({setLToken,setRole}) => {
 
   // const {token , setToken} = useContext(AuthContext);
   const navigate = useNavigate();
-  const isAuthenticated = localStorage.getItem('l_token'); // Check if user is logged in
+  const l_token = localStorage.getItem("l_token");
+  const role = localStorage.getItem("role");
+  const isAuthenticated = l_token
 
   const handleLogout = () => {
-    // if(token != null) setToken(null)// Remove token on logout
-    localStorage.removeItem('l_token');
-    navigate("/login"); // Redirect to login page
+    localStorage.removeItem("l_token");
+    localStorage.removeItem("role");
+    console.log("Token on logout");
+    const token = localStorage.getItem('l_token');
+    const Role = localStorage.getItem('role');
+    setLToken(token);
+    setRole(Role);
+    navigate("/");
   };
 
   return (

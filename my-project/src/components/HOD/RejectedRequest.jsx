@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { fetchPendingRequests, setAuthToken } from "../../api/hod_api";
+import { fetchRejectedRequests, setAuthToken } from "../../api/hod_api";
 import { Link, useNavigate, Outlet } from "react-router-dom";
 
-const LeaveHistory = () => {
-  const [PendingReq, setPendingReq] = useState([]);
+const RejectRequest = () => {
+  const [rejectedReq, setRejectedReq] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -17,42 +17,39 @@ const LeaveHistory = () => {
     }
     setAuthToken(token);
     
-    const PendingRequests = async () => {
+    const fetchRejectedRequestsData = async () => {
       try {
-        var response = await fetchPendingRequests();
+        const response = await fetchRejectedRequests();
         if (response?.data) {
-          setPendingReq(Array.isArray(response.data) ? response.data : [response.data]);
+          setRejectedReq(Array.isArray(response.data) ? response.data : [response.data]);
         } else {
           throw new Error("Invalid data format from API");
         }
       } catch (error) {
-        console.error("Error fetching leave history:", error);
+        console.error("Error fetching rejected leave history:", error);
         setError(error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    PendingRequests();
+    fetchRejectedRequestsData();
   }, [navigate]);
 
-  if (loading) return <p className="text-center">Loading leave history...</p>;
+  if (loading) return <p className="text-center">Loading rejected leave requests...</p>;
   if (error) return <p className="text-center text-danger">Error: {error}</p>;
-  if (!PendingReq.length) return <p className="text-center">No leave history found.</p>;
+  if (!rejectedReq.length) return <p className="text-center">No rejected leave requests found.</p>;
 
   return (
     <div className="container mt-4">
-      <h2 className="text-center mb-4">Pending Request</h2>
-      <button className="btn btn-secondary mb-3" onClick={() => navigate(-1)}>
-        Back
-      </button>
-      {PendingReq.map((leave, index) => (
-        <Link to={`application/${leave.id}`} key={index} className="text-decoration-none">
+      <h2 className="text-center mb-4">Rejected Leave Requests</h2>
+      {rejectedReq.map((leave, index) => (
+        <Link to={`rejected/${leave.id}`} key={index} className="text-decoration-none">
           <div className="card mb-4 shadow">
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center">
               <h5 className="card-title">{leave.natureOfLeave}</h5>
-              <span className={`badge fs-6 p-2 text-white ${leave.status === "Accepted" ? "bg-success" : leave.status === "Requested" ? "bg-warning text-dark" : "bg-danger"}`}>
+              <span className={`badge fs-6 p-2 text-white ${leave.status === "Rejected" ? "bg-danger" : "bg-warning"}`}>
                 {leave.status}
               </span>
               </div>
@@ -63,10 +60,10 @@ const LeaveHistory = () => {
         </Link>
       ))}
 
-      {/* Render LeaveInfo Here */}
+      {/* Render RejectRequestInfo Here */}
       <Outlet />
     </div>
   );
 };
 
-export default LeaveHistory;
+export default RejectRequest;

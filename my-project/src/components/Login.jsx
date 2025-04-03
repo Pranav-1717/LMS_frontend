@@ -1,68 +1,78 @@
 import React, { useState, useContext, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../css/login.css";
-import { login_api, refresh_token_api } from "../api/auth_api";
+import { login_api ,first_time_login} from "../api/auth_api";
 // import { AuthContext } from "../context/AuthContext";
 
-const Login = () => {
-  // const { token, setToken} = useContext(AuthContext); 
+const Login = ({setLToken,setRole}) => {
   const [teacherID, setTeacherID] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // useEffect(() => {
-  //   console.log("Login useEffect - Token:", token);
-  //   if (token) {
-  //     console.log("Navigating to Dashboard...");
-  //     navigate("/dashboard"); // Redirect if user is already logged in
-  //   } else {
-  //     console.log("No token found, attempting refresh...");
-  //     handleRefreshToken(); // Try refreshing token on mount
-  //   }
-  // }, [token]);
-  
-
-  // //  Refresh Token Function
-  // const handleRefreshToken = async () => {
-  //   try {
-  //     const response = await refresh_token_api();
-  //     if (response?.data?.accessToken) {
-  //       setToken(response.data.accessToken);
-  //       navigate("/dashboard");
-  //     }
-  //   } catch (error) {
-  //     console.log("Token refresh failed:", error);
-  //   }
-  // };
 
   //  Handle Login
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage("");
-
+  
     try {
-      // console.log("teacherID",teacherID);
-      // console.log("password",password)
       const response = await login_api(teacherID, password);
-      if (response.status === 200) {
-        // setToken(response.data.data.accessToken);
-        localStorage.setItem('l_token',response.data.data.accessToken)
-        const l_token =  localStorage.getItem('l_token')
-        console.log('l_token',l_token);
-        navigate("/dashboard"); // Redirect to dashboard
+  
+      // Check if response exists
+      if (response && response.status === 200 && response.data?.data) {
+        localStorage.setItem("l_token", response.data.data.accessToken);
+        localStorage.setItem("role", response.data.data.roles[0]);
+        const l_token = localStorage.getItem("l_token");
+        setLToken(l_token);
+
+        const role = response.data.data.roles[0];
+        setRole(role);
+        const isFirstTimeLogin = await first_time_login();
+
+        // if (isFirstTimeLogin) {
+        //   navigate("/signup"); // Redirect to first-time login page
+        // } else {
+        //   if (role === "admin") {
+        //     navigate("/admin-dashboard"); // Redirect to admin dashboard
+        //   } else if (role === "teacher") {
+        //     navigate("/teacher-dashboard"); // Redirect to teacher dashboard
+        //   } else {
+        //     navigate("/dashboard"); // Redirect to default dashboard
+        //   }
+        // }
+          if (role === "ADMIN") {
+            navigate("/admindashboard"); // Redirect to admin dashboard
+          } else if (role === "TEACHER") {
+            navigate("/dashboard"); // Redirect to teacher dashboard
+          } else if(role === "HOD") {
+            navigate("/hod_dashboard"); // Redirect to default dashboard
+          }
       } else {
-        setErrorMessage("Login failed. Please check your credentials.");
+        console.log("Unexpected Response:", response);
+        setErrorMessage("Login failed. Please try again later.");
       }
     } catch (error) {
-      setErrorMessage("Login failed. Please check your credentials.");
+      console.log("Login failed", error);
+      
+      // Handle different errors
+      if (error.response) {
+        console.log("Server Error Response:", error.response);
+        if (error.response.status === 500) {
+          setErrorMessage("Server error. Please try again later.");
+        } else {
+          setErrorMessage("Login failed. Please check your credentials.");
+        }
+      } else {
+        setErrorMessage("Network error. Please check your connection.");
+      }
     } finally {
       setLoading(false);
     }
   };
-
+  
 
   return (
     <section className="vh-100 d-flex align-items-center justify-content-center">

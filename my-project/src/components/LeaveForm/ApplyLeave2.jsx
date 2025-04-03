@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import LeaveDetailsForm from "./LeaveDetailsForm";
 import AlternateArrangementsTable from "./AlternateArrangementsTable";
-import { submitLeaveApplication } from "../../api/api"; // Import API function
+import { submitLeaveApplication, fetchTeacherInfo, fetchTeacherLeave ,setAuthToken} from '../../api/api';
+import { saveFormDataToSession, getFormDataFromSession, saveLecturesToLocal, getLecturesFromLocal, clearAllStoredData } from "../../utils/dataUtils";
 
 const ApplyLeave2 = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(getFormDataFromSession() || {
     applicantName: "",
     postHeld: "",
     numberOfDays: "",
@@ -12,107 +13,163 @@ const ApplyLeave2 = () => {
     reason: "",
     startDate: "",
     endDate: "",
-    leaveAddress:"",
-    phoneNumber:"",
+    leaveAddress: "",
+    teacherRegistrationId: "",
+    phoneNumber: "",
+    imageURL: "", // New field to store the uploaded image URL
   });
 
-  const [lectures, setLectures] = useState([]);
+  const [lectures, setLectures] = useState(getLecturesFromLocal() || []);
+  const [errors, setErrors] = useState({});
+  const [remainingLeaves, setRemainingLeaves] = useState({});
+  const token = localStorage.getItem("l_token");
+  setAuthToken(token); // Set the token for API requests
 
-  // Handle input changes for leave details
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const teacherId = await fetchTeacherInfo();
+        setFormData(prevFormData => ({
+          ...prevFormData,
+          teacherRegistrationId: teacherId
+        }));
+        saveFormDataToSession({
+          ...formData,
+          teacherRegistrationId: teacherId
+        });
+
+        const leaveTypes = await fetchTeacherLeave();
+        setRemainingLeaves(leaveTypes);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    saveLecturesToLocal(lectures);
+  }, [lectures]);
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.applicantName) newErrors.applicantName = "Applicant name is required.";
+    if (!formData.postHeld) newErrors.postHeld = "Post held is required.";
+    if (!formData.numberOfDays || formData.numberOfDays <= 0) newErrors.numberOfDays = "Number of days is required and must be greater than 0.";
+    if (!formData.natureOfLeave) newErrors.natureOfLeave = "Nature of leave is required.";
+    if (!formData.startDate) newErrors.startDate = "Start date is required.";
+    if (!formData.endDate) newErrors.endDate = "End date is required.";
+    if (formData.startDate && formData.endDate && new Date(formData.startDate) > new Date(formData.endDate)) {
+      newErrors.endDate = "End date must be after start date.";
+    }
+
+    if (formData.natureOfLeave === "MEDICAL_LEAVE" && (new Date(formData.startDate) >= new Date() || new Date(formData.endDate) >= new Date())) {
+      newErrors.startDate = "Medical leave should have past dates.";
+      newErrors.endDate = "Medical leave should have past dates.";
+    }
+
+    if (formData.natureOfLeave && remainingLeaves[formData.natureOfLeave] && formData.numberOfDays > remainingLeaves[formData.natureOfLeave]) {
+      newErrors.numberOfDays = `You only have ${remainingLeaves[formData.natureOfLeave]} ${formData.natureOfLeave} remaining.`;
+    }
+
+    if (!formData.leaveAddress) newErrors.leaveAddress = "Leave address is required.";
+    if (!formData.phoneNumber || !/^\d{10}$/.test(formData.phoneNumber)) newErrors.phoneNumber = "Valid phone number is required.";
+    if (!formData.reason) newErrors.reason = "Reason is required.";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  // Handle input changes for alternate arrangements
-  const handleLectureChange = (index, field, value) => {
-    const updatedLectures = [...lectures];
-    updatedLectures[index][field] = value;
-    setLectures(updatedLectures);
+  const handleFileUpload = (url) => {
+    setFormData({ ...formData, imageURL: url }); // Update imageURL when the file is uploaded
   };
 
-  // Add a new lecture row
-  const addLectureRow = () => {
-    setLectures((prevLectures) => [
-      ...prevLectures,
-      { date: "", startTime: "", endTime: "", division: "", subject: "", substituteTeacherId: "" }
-    ]);
-  };
-
-  // Remove a lecture row
-  const removeLectureRow = (index) => {
-    setLectures(lectures.filter((_, i) => i !== index));
-  };
-
-  // Submit full leave application
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    const teacherId = localStorage.getItem("teacherId"); // Get teacher ID from local storage
-
-    const finalData = {
-      teacherRegistrationId: teacherId,
+    const requestData = {
+      teacherRegistrationId: formData.teacherRegistrationId,
       applicantName: formData.applicantName,
       post: formData.postHeld,
-      numberOfDays: formData.numberOfDays,
+      numberOfDays: Number(formData.numberOfDays),
       startDate: formData.startDate,
       endDate: formData.endDate,
       natureOfLeave: formData.natureOfLeave,
       reason: formData.reason,
-      leaveAddress:formData.leaveAddress ,
-      phoneNumber:formData.phoneNumber ,
-      alternateArrangements: lectures.map((lec) => ({
-        date: lec.date,
-        startTime: lec.startTime,
-        endTime: lec.endTime,
-        division: lec.division,
-        subject: lec.subject,
-        substituteTeacherId: lec.substituteTeacherId,
-      })),
+      leaveAddress: formData.leaveAddress,
+      phoneNumber: formData.phoneNumber,
+      imageURL: formData.imageURL, // Include the image URL in the request
+      alternateArrangements: formData.natureOfLeave !== "MEDICAL_LEAVE" ? lectures.map((lecture) => ({
+        date: lecture.date,
+        startTime: lecture.startTime,
+        endTime: lecture.endTime,
+        division: lecture.division,
+        subject: lecture.subject,
+        originalTeacherId: formData.teacherRegistrationId,
+        substituteTeacherId: lecture.facultyId,
+      })) : [],
     };
 
-    console.log("Final data:" ,finalData);
-    // const response = await submitLeaveApplication(finalData);
-    console.log("Leave application response:", response);
+    try {
+      const response = await submitLeaveApplication(requestData);
+      console.log("Server Response:", response);
+      clearAllStoredData();
+      setFormData({
+        applicantName: "",
+        postHeld: "",
+        numberOfDays: "",
+        natureOfLeave: "",
+        reason: "",
+        startDate: "",
+        endDate: "",
+        leaveAddress: "",
+        phoneNumber: "",
+        imageURL: "", // Clear imageURL after submission
+      });
+      setLectures([]);
+      alert("Leave application submitted successfully!");
+      window.location.reload(); // or use navigate("/some-path") if using react-router
+    } catch (error) {
+      console.error("Error submitting leave application:", error);
+      alert("Error submitting leave application. Please try again.");
+    }
   };
 
   return (
-    <section className="apply-leave-container">
-      <div className="container">
-        <div className="row justify-content-center">
-          <div className="col-md-10 col-lg-12">
-            <div className="bg-white shadow-lg p-4 rounded">
-              <h2 className="text-center fw-bold mb-3">
-                PUNE INSTITUTE OF COMPUTER TECHNOLOGY <br />
-                DHANKAWADI, PUNE - 411 043.
-              </h2>
-              <h3 className="text-center text-primary">LEAVE APPLICATION</h3>
-
-              <form onSubmit={handleSubmit}>
-                {/* Leave Details Section */}
-                <LeaveDetailsForm formData={formData} handleInputChange={handleInputChange} />
-
-                {/* Alternate Arrangements Table */}
-                <AlternateArrangementsTable
-                  lectures={lectures}
-                  handleLectureChange={handleLectureChange}
-                  addLectureRow={addLectureRow}
-                  removeLectureRow={removeLectureRow}
-                />
-
-                {/* Submit Button */}
-                <div className="text-center mt-3">
-                  <button type="submit" className="btn btn-primary">
-                    Submit Application
-                  </button>
-                </div>
-              </form>
-
-            </div>
-          </div>
-        </div>
+    <form onSubmit={handleSubmit}>
+      <LeaveDetailsForm
+        formData={formData}
+        handleInputChange={handleInputChange}
+        errors={errors}
+        handleFileUpload={handleFileUpload} // Pass the function to handle file upload
+      />
+      {/* Only render AlternateArrangementsTable if natureOfLeave is not "MEDICAL_LEAVE" */}
+      {formData.natureOfLeave !== "MEDICAL_LEAVE" && (
+        <AlternateArrangementsTable
+          lectures={lectures}
+          handleLectureChange={(index, field, value) => {
+            const updatedLectures = [...lectures];
+            updatedLectures[index][field] = value;
+            setLectures(updatedLectures);
+          }}
+          addLectureRow={() => {
+            setLectures([
+              ...lectures,
+              { date: "", startTime: "", endTime: "", division: "", subject: "", facultyId: "", requested: false },
+            ]);
+          }}
+        />
+      )}
+      <div className="text-center mt-2">
+        <button type="submit" className="btn btn-primary">Submit</button>
       </div>
-    </section>
+    </form>
   );
 };
 

@@ -21,6 +21,18 @@ export const login_api = async (id, password) => {
     }
 };
 
+//Check is first time login
+export const first_time_login = async () => {
+    try {
+        const response = await api.post("auth/checkIsFirstTimeLogin");
+        console.log("response" , response);
+        return response.data;
+    } catch (error) {
+        console.log("Login failed", error);
+        return null;
+    }
+};
+
 //  Refresh Token API
 export const refresh_token_api = async () => {
     try {
@@ -28,6 +40,21 @@ export const refresh_token_api = async () => {
         return response; // Returns new access token
     } catch (error) {
         console.log("Token refresh failed", error);
+        return null;
+    }
+};
+
+//reset password
+export const reset_password_api = async (oldpass, newpass) => {
+    try {
+        const response = await api.post("auth/resetPassword", {
+            oldPassword: oldpass,
+            newPassword: newpass,
+        });
+        console.log("response" , response);
+        return response;
+    } catch (error) {
+        console.log("Login failed", error);
         return null;
     }
 };
@@ -57,5 +84,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+
 
 export default api;
